@@ -1,0 +1,14 @@
+The Challenge:
+
+you are working for a government agency as Data Analyst. You have supplied a dataset with consumer complaints received by financial institutions in 2013-2015.
+
+Your task is to read in r with name "ConsumerComplaints" and perform following analysis,
+
+1. Find out how many complaints were received and sent on the same day.
+2. Summarize the complaints received by states? 
+3. Extract all rows with the word "Credit" in the Product field? 
+4. Create flag 'Resolved' as 1 if complaints are resolved within 30 days? 
+5. Plot a bar chart with no of complaints by "Submitted via"?
+6. Which company gets more complaints in the last 6 months?
+7. Which product all the companies have problems with? select the top product and get the list of companies associated with it?
+8. Try to find any info other than i quoted above? Use your creativity? 	
