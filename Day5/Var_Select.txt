@@ -45,3 +45,79 @@ Variable_Selection[i,] <- c(col_Names, Dev_Estimate, Val_Estimate, Dev_Rsq, Dev_
 }
 
 Variable_Selection
+
+
+
+
+#Classification
+library(InformationValue)
+library(titanic)
+data("titanic_train")
+complete_data =titanic_train
+complete_data=na.omit(complete_data)
+summary(complete_data)
+
+#Variable  Selection
+input=complete_data[c(2,6,10)]
+
+set.seed(101) # Set Seed so that same sample can be reproduced in future also
+# Now Selecting 75% of data as sample from total 'n' rows of the data  
+sample <- sample.int(n = nrow(input), size = floor(.75*nrow(input)), replace = F)
+train <- input[sample, ]
+test  <- input[-sample, ]
+
+dim(input)
+dim(train)
+dim(test)
+
+Variable_Selection <- data.frame(matrix(vector(),ncol=7))
+colnames(Variable_Selection) <- c('ColNames','Dev_Estimate','Val_Estimate','WaldChiSq','Concordance','SomersD','KS')
+Variable_Selection
+
+dv_train=train$Survived
+dv_test=test$Survived
+idvs_train=subset(train, select = -c(Survived))
+idvs_test=subset(test, select = -c(Survived))
+
+for(i in 1 : ncol(idvs_train)){
+col_Names <- colnames(idvs_train)[i]
+
+Dev_Model=glm(dv_train~idvs_train[,i],data=idvs_train,family=binomial(link="logit"))
+print(summary(Dev_Model))
+#Dev_Intercept=coef(Dev_Model)["(Intercept)"]
+Dev_Estimate=coef(Dev_Model)["idvs_train[, i]"]
+
+unilogit = function(df,depvar) {
+  depvar1 = deparse(substitute(depvar))
+  lapply(names(df)[which(names(df)!= depvar1)], function(x)
+  {mylogit = glm(formula(paste(depvar1,"~",x)), data = df, family=binomial(link="logit"))
+  summary(mylogit)$coefficient}
+  )
+}
+idv=data.frame(c(idvs_train[,i]))
+names(idv)=colnames(idvs_train)[i]
+
+univariate = unilogit(idv, dv_train)
+
+final <- do.call(rbind, univariate)
+univList = cbind(data.frame(Variable = row.names(final)),final)
+FinalList = subset(univList, Variable!="(Intercept)")
+FinalList[,"WaldChiSquare"] = FinalList[4]^2
+WaldChiSq=FinalList$WaldChiSquare
+
+
+Score_data=cbind(data.frame(Actual=c(dv_train)),idvs_train)
+Score_data$Predicted <- predict(Dev_Model, Score_data, type="response")  
+Concor=Concordance(Score_data$Actual, Score_data$Predicted)
+Concordance=Concor$Concordance
+SomersD=somersD(actuals=Score_data$Actual, predictedScores=Score_data$Predicted)
+ks=ks_stat(actuals=Score_data$Actual, predictedScores=Score_data$Predicted)
+
+Val_Model=glm(dv_test~idvs_test[,i],data=idvs_test,family=binomial(link="logit"))
+#Val_Intercept=coef(Val_Model)["(Intercept)"]
+Val_Estimate=coef(Val_Model)["idvs_test[, i]"]
+
+Variable_Selection[i,] <- c(col_Names, Dev_Estimate, Val_Estimate,WaldChiSq,Concordance,SomersD,ks)
+}
+
+Variable_Selection
