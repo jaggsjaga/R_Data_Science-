@@ -1,0 +1,47 @@
+#################################################################
+#Variable  Selection
+input=mtcars
+
+set.seed(101) # Set Seed so that same sample can be reproduced in future also
+# Now Selecting 75% of data as sample from total 'n' rows of the data  
+sample <- sample.int(n = nrow(input), size = floor(.75*nrow(input)), replace = F)
+train <- input[sample, ]
+test  <- input[-sample, ]
+
+dim(input)
+dim(train)
+dim(test)
+
+Variable_Selection <- data.frame(matrix(vector(),ncol=5))
+colnames(Variable_Selection) <- c('ColNames','Dev_Estimate','Val_Estimate','Dev_Rsq','Dev_RMSE')
+Variable_Selection
+
+dv_train=train$mpg
+dv_test=test$mpg
+idvs_train=subset(train, select = -c(mpg))
+idvs_test=subset(test, select = -c(mpg))
+
+for(i in 1 : ncol(idvs_train)){
+col_Names <- colnames(idvs_train)[i]
+
+Dev_Model=lm(dv_train~idvs_train[,i],data=idvs_train)
+print(summary(Dev_Model))
+#Dev_Intercept=coef(Dev_Model)["(Intercept)"]
+Dev_Estimate=coef(Dev_Model)["idvs_train[, i]"]
+Dev_Rsq=summary(Dev_Model)$r.squared
+
+#Residual sum of squares:
+Dev_RSS <- c(crossprod(Dev_Model$residuals))
+#Mean squared error:
+Dev_MSE <- Dev_RSS / length(Dev_Model$residuals)
+#Root MSE:
+Dev_RMSE <- sqrt(Dev_MSE)
+
+Val_Model=lm(dv_test~idvs_test[,i],data=idvs_test)
+#Val_Intercept=coef(Val_Model)["(Intercept)"]
+Val_Estimate=coef(Val_Model)["idvs_test[, i]"]
+
+Variable_Selection[i,] <- c(col_Names, Dev_Estimate, Val_Estimate, Dev_Rsq, Dev_RMSE)
+}
+
+Variable_Selection
