@@ -1,0 +1,38 @@
+library(faraway)
+library(sqldf)
+library(ggplot2)
+library(dplyr)
+library(scales)
+options(scipen=999)  
+
+need_numeric=read.table(file.choose(),header=TRUE)
+
+Numeric_EDA_Final <- data.frame(matrix(vector(),ncol=33))
+colnames(Numeric_EDA_Final) <- c('ColNames', 'min','max','mean','p1','p2','p3','p4','p5','p10','p15','p20','p25','p30',
+                             'p35','p40','p45','p50','p55','p60','p65','p70','p75','p80','p85',
+                             'p90','p95','p96','p97','p98','p99','N_miss','Total_Number')
+Numeric_EDA_Final
+colnames(Numeric_EDA_Final)
+
+#Calculate 'ColNames', 'min','max','mean','p5','p10','p15','p20','p25','p30',
+#'p35','p40','p45','p50','p55','p60','p65','p70','p75','p80','p85',
+#'p90','p95','N_miss','Total_Number'
+
+for(i in 1 : ncol(need_numeric)){
+  col_Names <- colnames(need_numeric)[i]
+  minData <- min(need_numeric[,i], na.rm = TRUE)
+  maxData <- max(need_numeric[,i], na.rm = TRUE)
+  meanData <- mean(need_numeric[,i], na.rm = TRUE)
+  quantileValue  <- quantile(need_numeric[,i], c(0.01,0.02,0.03,0.04,0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90,0.95,0.96,0.97,0.98,0.99), na.rm = TRUE)
+  individualQVaule <- NULL
+  for(j in 1 : length(quantileValue)){
+    individualQVaule[j] <- quantileValue[[j]]
+  }
+  misCount <- sum(is.na(need_numeric[,i]))
+  countDta <- nrow(need_numeric[i])
+  Numeric_EDA_Final[i,] <- c(col_Names, minData, maxData, meanData, c(individualQVaule), misCount, countDta)
+}
+
+#Final Dataset for Male
+Numeric_EDA_Final
+write.csv(Numeric_EDA_Final,'Numeric_EDA_Final.csv')
