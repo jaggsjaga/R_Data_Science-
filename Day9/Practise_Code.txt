@@ -1,0 +1,331 @@
+library(sqldf)
+library(faraway)
+library(ggplot2)
+library(dplyr)
+library(scales)
+options(scipen=999) 
+
+Servicer_Loan_Data=read.csv(file.choose())
+Unemployment_Rate=read.csv(file.choose())
+Median_Household=read.csv(file.choose())
+US_StateCode=read.csv(file.choose())
+new_state=data.frame(State=c("D.C.","Puerto Rico"),State_Code=c("DC","PR"))
+US_StateCode=rbind(US_StateCode,new_state)
+rm(new_state)
+
+names(Servicer_Loan_Data)[8]="State_Code"
+names(Unemployment_Rate)=c("State","UR_Jan_18", "UR_Feb_18" ,"UR_Mar_18", "UR_Apr_18" ,"UR_May_18" ,"UR_Jun_18" ,"UR_Jul_18" ,"UR_Aug_18", "UR_Sep_18", "UR_Oct_18", "UR_Nov_18", "UR_Dec_18" ,"UR_Jan_19", "UR_Feb_19", "UR_Mar_19")
+names(Median_Household)=c("State" , "HH_2018" ,"HH_2017", "HH_2016")
+colnames(Servicer_Loan_Data)
+names(Unemployment_Rate)
+names(Median_Household)
+names(US_StateCode)
+
+#handle US state issue
+Unemployment_Rate=sqldf('select a.*,b.State_Code from Unemployment_Rate a left join US_StateCode b on a.State=b.State')
+Median_Household=sqldf('select a.*,b.State_Code from Median_Household a left join US_StateCode b on a.State=b.State')
+Unemployment_Rate[1]=NULL
+Median_Household[1]=NULL
+
+#D.C.
+#Puerto Rico
+#list=sqldf('select distinct State, State_Code from  Median_Household')
+#list
+
+input=sqldf('select a.*,b.*,c.* from Servicer_Loan_Data a left join Unemployment_Rate b on a.State_Code=b.State_Code left join Median_Household c on a.State_Code=c.State_Code')
+#names(input)[30]="DV"
+names(input)[29]="DV"
+
+#Creating Dummies
+input <- fastDummies::dummy_cols(input, select_columns = c("SEX","EDUCATION","MARRIAGE","State_Code","Zip"))
+
+Numeric_EDA=input
+Numeric_EDA[c(1,2,4,5,6,8,9,10,46,50)]=NULL
+Numeric_EDA$HH_2018=as.numeric(Numeric_EDA$HH_2018)
+Numeric_EDA$HH_2017=as.numeric(Numeric_EDA$HH_2017)
+Numeric_EDA$HH_2016=as.numeric(Numeric_EDA$HH_2016)
+head(Numeric_EDA,2)
+
+dim(Servicer_Loan_Data)
+dim(Unemployment_Rate)
+dim(Median_Household)
+dim(input)
+
+
+#EDA - Continous Data
+need_numeric=Numeric_EDA[c(1,2,9,10,11,12,13,14,15,16,17,18,19,20,21,22,38,39,40)]
+Numeric_EDA_Final <- data.frame(matrix(vector(),ncol=33))
+colnames(Numeric_EDA_Final) <- c('ColNames', 'min','max','mean','p1','p2','p3','p4','p5','p10','p15','p20','p25','p30',
+                             'p35','p40','p45','p50','p55','p60','p65','p70','p75','p80','p85',
+                             'p90','p95','p96','p97','p98','p99','N_miss','Total_Number')
+Numeric_EDA_Final
+colnames(Numeric_EDA_Final)
+
+#Calculate 'ColNames', 'min','max','mean','p5','p10','p15','p20','p25','p30',
+#'p35','p40','p45','p50','p55','p60','p65','p70','p75','p80','p85',
+#'p90','p95','N_miss','Total_Number'
+
+for(i in 1 : ncol(need_numeric)){
+  col_Names <- colnames(need_numeric)[i]
+  minData <- min(need_numeric[,i], na.rm = TRUE)
+  maxData <- max(need_numeric[,i], na.rm = TRUE)
+  meanData <- mean(need_numeric[,i], na.rm = TRUE)
+  quantileValue  <- quantile(need_numeric[,i], c(0.01,0.02,0.03,0.04,0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.85,0.90,0.95,0.96,0.97,0.98,0.99), na.rm = TRUE)
+  individualQVaule <- NULL
+  for(j in 1 : length(quantileValue)){
+    individualQVaule[j] <- quantileValue[[j]]
+  }
+  misCount <- sum(is.na(need_numeric[,i]))
+  countDta <- nrow(need_numeric[i])
+  Numeric_EDA_Final[i,] <- c(col_Names, minData, maxData, meanData, c(individualQVaule), misCount, countDta)
+}
+
+#Final Dataset for Male
+Numeric_EDA_Final
+write.csv(Numeric_EDA_Final,'Numeric_EDA_Final.csv')
+
+#Discrete data freq dist
+PAY_0=data.frame(Variable_name=c("PAY_0"),table(Numeric_EDA$PAY_0))
+PAY_2=data.frame(Variable_name=c("PAY_2"),table(Numeric_EDA$PAY_2))
+PAY_3=data.frame(Variable_name=c("PAY_3"),table(Numeric_EDA$PAY_3))
+PAY_4=data.frame(Variable_name=c("PAY_4"),table(Numeric_EDA$PAY_4))
+PAY_5=data.frame(Variable_name=c("PAY_5"),table(Numeric_EDA$PAY_5))
+PAY_6=data.frame(Variable_name=c("PAY_6"),table(Numeric_EDA$PAY_6))
+UR_Jan_18=data.frame(Variable_name=c("UR_Jan_18"),table(Numeric_EDA$UR_Jan_18))
+UR_Feb_18=data.frame(Variable_name=c("UR_Feb_18"),table(Numeric_EDA$UR_Feb_18))
+UR_Mar_18=data.frame(Variable_name=c("UR_Mar_18"),table(Numeric_EDA$UR_Mar_18))
+UR_Apr_18=data.frame(Variable_name=c("UR_Apr_18"),table(Numeric_EDA$UR_Apr_18))
+UR_May_18=data.frame(Variable_name=c("UR_May_18"),table(Numeric_EDA$UR_May_18))
+UR_Jun_18=data.frame(Variable_name=c("UR_Jun_18"),table(Numeric_EDA$UR_Jun_18))
+UR_Jul_18=data.frame(Variable_name=c("UR_Jul_18"),table(Numeric_EDA$UR_Jul_18))
+UR_Aug_18=data.frame(Variable_name=c("UR_Aug_18"),table(Numeric_EDA$UR_Aug_18))
+UR_Sep_18=data.frame(Variable_name=c("UR_Sep_18"),table(Numeric_EDA$UR_Sep_18))
+UR_Oct_18=data.frame(Variable_name=c("UR_Oct_18"),table(Numeric_EDA$UR_Oct_18))
+UR_Nov_18=data.frame(Variable_name=c("UR_Nov_18"),table(Numeric_EDA$UR_Nov_18))
+UR_Dec_18=data.frame(Variable_name=c("UR_Dec_18"),table(Numeric_EDA$UR_Dec_18))
+UR_Jan_19=data.frame(Variable_name=c("UR_Jan_19"),table(Numeric_EDA$UR_Jan_19))
+UR_Feb_19=data.frame(Variable_name=c("UR_Feb_19"),table(Numeric_EDA$UR_Feb_19))
+UR_Mar_19=data.frame(Variable_name=c("UR_Mar_19"),table(Numeric_EDA$UR_Mar_19))
+
+Categorial=rbind(PAY_0,PAY_2,PAY_3,PAY_4,PAY_5,PAY_6, UR_Jan_18,UR_Feb_18,UR_Mar_18,UR_Apr_18,UR_May_18,UR_Jun_18,UR_Jul_18,UR_Aug_18,UR_Sep_18,UR_Oct_18,UR_Nov_18,UR_Dec_18,UR_Jan_19,UR_Feb_19,UR_Mar_19)
+
+#Capping_Flooring
+q  <- quantile(input$BILL_AMT1, c(0.01, 0.9))
+input$BILL_AMT1 <- squish(input$BILL_AMT1, q)
+q  <- quantile(input$BILL_AMT2, c(0.01, 0.9))
+input$BILL_AMT2 <- squish(input$BILL_AMT2, q)
+q  <- quantile(input$BILL_AMT3, c(0.01, 0.9))
+input$BILL_AMT3 <- squish(input$BILL_AMT3, q)
+q  <- quantile(input$BILL_AMT4, c(0.01, 0.9))
+input$BILL_AMT4 <- squish(input$BILL_AMT4, q)
+q  <- quantile(input$BILL_AMT5, c(0.01, 0.9))
+input$BILL_AMT5 <- squish(input$BILL_AMT5, q)
+q  <- quantile(input$BILL_AMT6, c(0.01, 0.9))
+input$BILL_AMT6 <- squish(input$BILL_AMT6, q)
+
+input$LIMIT_BAL=ifelse(input$LIMIT_BAL>=500000,500000,input$LIMIT_BAL)
+input$PAY_AMT1=ifelse(input$PAY_AMT1>=18428.2,18428.2,input$PAY_AMT1)
+input$PAY_AMT2=ifelse(input$PAY_AMT2>=19004.35,19004.35,input$PAY_AMT2)
+input$PAY_AMT3=ifelse(input$PAY_AMT3>=17589.4,17589.4,input$PAY_AMT3)
+input$PAY_AMT4=ifelse(input$PAY_AMT4>=16014.95,16014.95,input$PAY_AMT4)
+input$PAY_AMT5=ifelse(input$PAY_AMT5>=16000,16000,input$PAY_AMT5)
+input$PAY_AMT6=ifelse(input$PAY_AMT6>=17343.8,17343.8,input$PAY_AMT6)
+
+
+#Data Prep Done
+#Splitting Train & Test
+set.seed(101) # Set Seed so that same sample can be reproduced in future also
+# Now Selecting 75% of data as sample from total 'n' rows of the data  
+sample <- sample.int(n = nrow(input), size = floor(.75*nrow(input)), replace = F)
+train <- input[sample, ]
+test  <- input[-sample, ]
+dim(input)
+dim(train)
+dim(test)
+
+
+#Model Build
+#logistic Regression
+
+logistic=glm(DV~LIMIT_BAL+
+AGE+
+PAY_0+
+PAY_2+
+PAY_3+
+PAY_4+
+PAY_5+
+PAY_6+
+BILL_AMT1+
+BILL_AMT2+
+BILL_AMT3+
+BILL_AMT4+
+BILL_AMT5+
+BILL_AMT6+
+PAY_AMT1+
+PAY_AMT2+
+PAY_AMT3+
+PAY_AMT4+
+PAY_AMT5+
+PAY_AMT6+
+Corp_Adv+
+UR_Jan_18+
+UR_Feb_18+
+UR_Mar_18+
+UR_Apr_18+
+UR_May_18+
+UR_Jun_18+
+UR_Jul_18+
+UR_Aug_18+
+UR_Sep_18+
+UR_Oct_18+
+UR_Nov_18+
+UR_Dec_18+
+UR_Jan_19+
+UR_Feb_19+
+UR_Mar_19+
+HH_2018+
+HH_2017+
+HH_2016+
+SEX_2+
+SEX_1+
+EDUCATION_2+
+EDUCATION_3+
+EDUCATION_1+
+EDUCATION_5+
+EDUCATION_4+
+EDUCATION_6+
+EDUCATION_0+
+MARRIAGE_1+
+MARRIAGE_2+
+MARRIAGE_3+
+MARRIAGE_0+
+State_Code_NV+
+State_Code_NJ+
+State_Code_UT+
+State_Code_NH+
+State_Code_MI+
+State_Code_TN+
+State_Code_WY+
+State_Code_NM+
+State_Code_IL+
+State_Code_VA+
+State_Code_OR+
+State_Code_NC+
+State_Code_LA+
+State_Code_SD+
+State_Code_RI+
+State_Code_VT+
+State_Code_NY+
+State_Code_AZ+
+State_Code_ND+
+State_Code_WI+
+State_Code_CA+
+State_Code_CT+
+State_Code_IA+
+State_Code_MA+
+State_Code_FL+
+State_Code_MS+
+State_Code_NE+
+State_Code_OH+
+State_Code_KY+
+State_Code_AL+
+State_Code_AK+
+State_Code_IN+
+State_Code_AR+
+State_Code_HI+
+State_Code_KS+
+State_Code_WV+
+State_Code_ME+
+State_Code_DC+
+State_Code_MT+
+State_Code_PA+
+State_Code_ID+
+State_Code_SC+
+State_Code_CO+
+State_Code_GA+
+State_Code_TX+
+State_Code_MN+
+State_Code_WA+
+State_Code_OK+
+State_Code_DE+
+State_Code_MD+
+State_Code_MO+
+Zip_89317+
+Zip_7309+
+Zip_84530+
+Zip_3648+
+Zip_49430+
+Zip_38401+
+Zip_82718+
+Zip_87413+
+Zip_60651+
+Zip_23328+
+Zip_97304+
+Zip_27915+
+Zip_71284+
+Zip_57440+
+Zip_2909+
+Zip_5061+
+Zip_14043+
+Zip_85268+
+Zip_58323+
+Zip_53031+
+Zip_92232+
+Zip_6053+
+Zip_52585+
+Zip_2472+
+Zip_33446+
+Zip_38602+
+Zip_68743+
+Zip_43984+
+Zip_41065+
+Zip_35979+
+Zip_99671+
+Zip_47520+
+Zip_71937+
+Zip_96778+
+Zip_67102+
+Zip_26253+
+Zip_4617+
+Zip_20227+
+Zip_59333+
+Zip_17932+
+Zip_83401+
+Zip_29607+
+Zip_81148+
+Zip_31150+
+Zip_75475+
+Zip_56171+
+Zip_98520+
+Zip_74801+
+Zip_19951+
+Zip_21634+
+Zip_64503,data=train, family=binomial(link="logit"))
+
+summary(logistic)
+vif(logistic)
+
+train$p <- predict(logistic, train, type="response")  
+test$p <- predict(logistic, test, type="response")  
+
+train$predicted=ifelse(train$p>=0.5,1,0)
+test$predicted=ifelse(test$p>=0.5,1,0)
+
+table(train$DV,train$predicted)
+
+library(car)
+#Train_confusionMatrix=confusionMatrix(train$DV, train$predicted)
+Train_Concordance=Concordance(train$DV, train$p)
+Train_somersD=somersD(actuals= train$DV, predictedScores= train$p)
+
+
+
+
+
+
+
+
+
+
+
+
